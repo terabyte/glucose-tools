@@ -13,9 +13,8 @@ $ ./analyze.py
 ```
 
 # TODO
-* read in multiple files, in parallel
-** people will have potentially hundreds of files, many of them with overlap
-* produce all-time graph
-* produce last month graph
+* clean up graph, make it prettier
+* produce weekly graphs over a time interval longer than 1 week (i.e. for a month, produce 4 week-long graphs)
 * produce daily aggregate average graph
 * produce weekly aggregate average graph
+* produce change graphs - weekly, daily, or monthly, Sun-Saturday with each time interval in a gradient color to see most trends over time
