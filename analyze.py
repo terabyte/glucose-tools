@@ -96,6 +96,9 @@ def main():
     config = {
         'target_min': 70,
         'target_max': 180,
+        'time_in_tz_min': 80.0,
+        'time_in_tz_max': 100.0,
+        'time_in_tz_warn': 70.0,
         'weeks_start_on': 6,  # 6 = sunday
     }
 
@@ -120,7 +123,9 @@ def main():
 
     config['reports_dir'] = reports_dir
     generate_weekly_reports(config, data)
-    generate_all_time_plot(os.path.join(reports_dir, "all-time-graph.png"), config, data)
+    generate_all_time_glucose_plot(os.path.join(reports_dir, "all-time-glucose-graph.png"), config, data)
+    generate_all_time_tz_plot(os.path.join(reports_dir, "all-time-tz-graph.png"), config, data)
+    generate_weekly_tz_plot(os.path.join(reports_dir, "weekly-tz-graph.png"), config, data)
     sys.exit(0)
 
 
@@ -225,7 +230,7 @@ def calculate_time_in_target(tz_min, tz_max, time_data, glucose, start_date=None
     then calculating where that line crosses the border of the zone.
 
     # ### TODO TEST CODE
-    time_data, glucose = graphify_data(data)
+    time_data, glucose = graphify_glucose_data(data)
 
     logging.debug("Calculating TZ data")
 
@@ -340,8 +345,8 @@ def calculate_time_in_target(tz_min, tz_max, time_data, glucose, start_date=None
     return ratio
 
 
-def graphify_data(data, start_date=None, end_date=None):
-    logging.debug("Graphifying data set")
+def graphify_glucose_data(data, start_date=None, end_date=None):
+    logging.debug("Graphifying glucose data set")
     if start_date:
         logging.debug(f"Limiting dataset to dates after {date_to_output(start_date)}")
     if end_date:
@@ -372,7 +377,23 @@ def graphify_data(data, start_date=None, end_date=None):
     return (time_data, glucose)
 
 
-def generate_plot_from_data(output_file, title, config, time_data, glucose):
+def graphify_time_in_tz_data(config, data, start_date=None, end_date=None, interval=datetime.timedelta(days=1)):
+    logging.debug("Graphifying time in tz data set")
+    time_data, glucose = graphify_glucose_data(data, start_date, end_date)
+
+    time_in_tz_x = []
+    time_in_tz_y = []
+
+    #tz_time = calculate_time_in_target(config['target_min'], config['target_max'], time_data, glucose)
+    current_day = time_data[0]
+    while current_day <= time_data[-1]:
+        time_in_tz_x.append(current_day)
+        time_in_tz_y.append(100.0*calculate_time_in_target(config['target_min'], config['target_max'], time_data, glucose, current_day, current_day + interval))
+        current_day = current_day + interval
+    return (time_in_tz_x, time_in_tz_y)
+
+
+def generate_glucose_plot_from_data(output_file, title, config, time_data, glucose):
     # some calculations before we get started...
     # time in target for entire graph
     tz_time = calculate_time_in_target(config['target_min'], config['target_max'], time_data, glucose)
@@ -396,7 +417,7 @@ def generate_plot_from_data(output_file, title, config, time_data, glucose):
         ax.set_yticks(np.arange(30, 500, 20))
         fig.autofmt_xdate()
 
-        ax.plot(time_data, glucose, 'k.-', label=["Blood Glucose Level (mg/dL)"])
+        ax.plot(time_data, glucose, 'k.-', label="Blood Glucose Level (mg/dL)")
 
         # draw target zone
         plt.axhline(y=config['target_min'], color='green', linestyle='--')
@@ -407,9 +428,41 @@ def generate_plot_from_data(output_file, title, config, time_data, glucose):
         legend = ax.legend()
         plt.savefig(output_file)
 
+def generate_time_in_tz_plot_from_data(output_file, title, config, time_data, time_in_tz):
+    # some upfront calculations
+    avg_tz_time = np.average(time_in_tz)  # this works because time_data is always equally spaced out
+
+    # To find list of valid params here: pprint.pprint(plt.rcParams.keys())
+    with plt.rc_context({
+        'axes.autolimit_mode': 'round_numbers',
+        'figure.figsize': [20, 4],  # todo: extract this?
+        'axes.xmargin': 0.001,
+        'savefig.bbox': 'tight',
+        'savefig.pad_inches': 0.1,
+    }):
+
+        fig, ax = plt.subplots()
+        fig.suptitle(title + f" (all-time average: {avg_tz_time:.1f}%)")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Time in target zone (%)")
+        ax.set_yticks(np.arange(0, 100, 5))
+        fig.autofmt_xdate()
+
+        ax.plot(time_data, time_in_tz, 'k.-', label="Time in target zone (%)")
+
+        # draw target zone
+        plt.axhline(y=config['time_in_tz_max'], color='green', linestyle='--')
+        plt.axhline(y=config['time_in_tz_min'], color='orange', linestyle='--')
+        plt.axhline(y=config['time_in_tz_warn'], color='red', linestyle='--')
+        (xlim_min, xlim_max) = ax.get_xbound()
+        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config['time_in_tz_min'], config['time_in_tz_min'], config['time_in_tz_max'], config['time_in_tz_max']), 'palegreen')
+        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config['time_in_tz_warn'], config['time_in_tz_warn'], config['time_in_tz_min'], config['time_in_tz_min']), 'palegoldenrod')
+
+        legend = ax.legend()
+        plt.savefig(output_file)
 
 def generate_weekly_reports(config, data):
-    time_data, glucose = graphify_data(data)
+    time_data, glucose = graphify_glucose_data(data)
     # find the starting day of the same week as the first data point
     # first, get the minimum time on the same day
     first_day = datetime.datetime.combine(time_data[0].date(), datetime.time().min)
@@ -444,17 +497,35 @@ def generate_one_week_report(output_file, title, config, data, start_date):
     """
     Given the already-parsed data, and a starting date, generate a graph of the data for the week starting at the given date.
     """
-    time_data, glucose = graphify_data(data, start_date=start_date, end_date=(start_date + datetime.timedelta(weeks=1)))
-    generate_plot_from_data(output_file, title, config, time_data, glucose)
+    time_data, glucose = graphify_glucose_data(data, start_date=start_date, end_date=(start_date + datetime.timedelta(weeks=1)))
+    generate_glucose_plot_from_data(output_file, title, config, time_data, glucose)
 
 
-def generate_all_time_plot(output_file, config, data):
+def generate_all_time_glucose_plot(output_file, config, data):
     """
     Given the already-parsed data, generate a graph of all time blood glucose levels.
     """
     # first, produce data we can easily plot
-    time_data, glucose = graphify_data(data)
-    generate_plot_from_data(output_file, "All-Time Blood Glucose Levels", config, time_data, glucose)
+    time_data, glucose = graphify_glucose_data(data)
+    generate_glucose_plot_from_data(output_file, "All-Time Blood Glucose Levels", config, time_data, glucose)
+
+
+def generate_weekly_tz_plot(output_file, config, data):
+    """
+    Given the already-parsed data, generate a graph of weekly pct time in tz
+    """
+    # first, produce data we can easily plot
+    time_data, tz_data = graphify_time_in_tz_data(config, data, None, None, datetime.timedelta(weeks=1))
+    generate_time_in_tz_plot_from_data(output_file, "All-Time Weekly Percentage Time in Target Zone", config, time_data, tz_data)
+
+
+def generate_all_time_tz_plot(output_file, config, data):
+    """
+    Given the already-parsed data, generate a graph of all time pct time in tz
+    """
+    # first, produce data we can easily plot
+    time_data, tz_data = graphify_time_in_tz_data(config, data)
+    generate_time_in_tz_plot_from_data(output_file, "All-Time Daily Percentage Time in Target Zone", config, time_data, tz_data)
 
 
 if __name__ == '__main__':

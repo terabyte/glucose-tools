@@ -20,3 +20,4 @@ $ ./analyze.py
 * produce weekly aggregate average graph
 * produce change graphs - weekly, daily, or monthly, Sun-Saturday with each time interval in a gradient color to see most trends over time
 * calculate average glucose over data - use convolve and window?  https://stackoverflow.com/questions/15959819/time-series-averaging-in-numpy-python
+* make time in TZ graph y-axes pinned to 0 and 100%
