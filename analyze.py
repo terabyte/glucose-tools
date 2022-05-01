@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import argparse
 import csv
 import datetime
 import dateutil
+import json
 import logging
 import memoization
 import os
@@ -84,7 +86,7 @@ def date_to_output(datetime):
     return datetime.strftime("%Y%m%d_%H%M%S")
 
 
-def main():
+def main(config):
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
     logging.getLogger('matplotlib').setLevel(logging.INFO)
@@ -93,35 +95,48 @@ def main():
 
     time_data = []
     data = {}
-    config = {
-        'target_min': 70,
-        'target_max': 180,
-        'time_in_tz_min': 80.0,
-        'time_in_tz_max': 100.0,
-        'time_in_tz_warn': 70.0,
-        'weeks_start_on': 6,  # 6 = sunday
-    }
+    #config = {
+    #    'target_min': 70,
+    #    'target_max': 180,
+    #    'time_in_tz_min': 80.0,
+    #    'time_in_tz_max': 100.0,
+    #    'time_in_tz_warn': 70.0,
+    #    'weeks_start_on': 6,  # 6 = sunday
+    #}
 
-    with open(sys.argv[1]) as f:
-        created_by = f.readline()
-        headers = f.readline().strip().split(",")
-        csv_rows = csv.reader(f)
-        for line in csv_rows:
-            row = {}
-            for header_idx in range(len(HEADER_ORDER)):
-                row[BUILT_IN_HEADERS[HEADER_ORDER[header_idx]]] = line[header_idx]
-            row['datetime'] = dateutil.parser.parse(row['timestamp'])
-            row['time'] = row['datetime'].timestamp()
-            time_data.append(row['time'])
-            data[row['time']] = row
+    # first parse any cgm data
+    for filepath in config.cgm_data:
+        logging.info(f"Reading in CGM data file {filepath}")
+        with open(filepath) as f:
+            created_by = f.readline()
+            headers = f.readline().strip().split(",")
+            csv_rows = csv.reader(f)
+            for line in csv_rows:
+                row = {}
+                for header_idx in range(len(HEADER_ORDER)):
+                    row[BUILT_IN_HEADERS[HEADER_ORDER[header_idx]]] = line[header_idx]
+                row['datetime'] = dateutil.parser.parse(row['timestamp'])
+                row['time'] = row['datetime'].timestamp()
+                time_data.append(row['time'])
+                data[row['time']] = row
+
+    # parse any notes data
+    for filepath in config.notes_data:
+        logging.info(f"Reading in notes data file {filepath}")
+        with open(filepath) as f:
+            rawdata = json.load(f)
+            notes_data = list(map(lambda x: dict(x, datetime=dateutil.parser.parse(x['date'])), rawdata))
+            notes_data = list(map(lambda x: dict(x, timestamp=x['datetime'].timestamp()), notes_data))
+            config.notes = notes_data
 
     current_datetime = datetime.datetime.now()
     timestr = date_to_output(current_datetime)
+    # TODO: move this into args code
     reports_dir = os.path.join(os.getcwd(), "reports", timestr)
     logging.info(f"Generating reports for {timestr}, will store to {reports_dir}")
     os.makedirs(reports_dir, exist_ok=True)
 
-    config['reports_dir'] = reports_dir
+    config.reports_dir = reports_dir
     generate_weekly_reports(config, data)
     generate_all_time_glucose_plot(os.path.join(reports_dir, "all-time-glucose-graph.png"), config, data)
     generate_all_time_tz_plot(os.path.join(reports_dir, "all-time-tz-graph.png"), config, data)
@@ -388,7 +403,7 @@ def graphify_time_in_tz_data(config, data, start_date=None, end_date=None, inter
     current_day = time_data[0]
     while current_day <= time_data[-1]:
         time_in_tz_x.append(current_day)
-        time_in_tz_y.append(100.0*calculate_time_in_target(config['target_min'], config['target_max'], time_data, glucose, current_day, current_day + interval))
+        time_in_tz_y.append(100.0*calculate_time_in_target(config.target_min, config.target_max, time_data, glucose, current_day, current_day + interval))
         current_day = current_day + interval
     return (time_in_tz_x, time_in_tz_y)
 
@@ -396,7 +411,7 @@ def graphify_time_in_tz_data(config, data, start_date=None, end_date=None, inter
 def generate_glucose_plot_from_data(output_file, title, config, time_data, glucose):
     # some calculations before we get started...
     # time in target for entire graph
-    tz_time = calculate_time_in_target(config['target_min'], config['target_max'], time_data, glucose)
+    tz_time = calculate_time_in_target(config.target_min, config.target_max, time_data, glucose)
     # y_min = int(np.min(glucose) * 0.95)
     # y_max = int(np.max(glucose) * 1.05)
     # y_ticks = 20
@@ -420,10 +435,10 @@ def generate_glucose_plot_from_data(output_file, title, config, time_data, gluco
         ax.plot(time_data, glucose, 'k.-', label="Blood Glucose Level (mg/dL)")
 
         # draw target zone
-        plt.axhline(y=config['target_min'], color='green', linestyle='--')
-        plt.axhline(y=config['target_max'], color='red', linestyle='--')
+        plt.axhline(y=config.target_min, color='green', linestyle='--')
+        plt.axhline(y=config.target_max, color='red', linestyle='--')
         (xlim_min, xlim_max) = ax.get_xbound()
-        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config['target_min'], config['target_min'], config['target_max'], config['target_max']), 'palegreen')
+        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config.target_min, config.target_min, config.target_max, config.target_max), 'palegreen')
 
         legend = ax.legend()
         plt.savefig(output_file)
@@ -451,12 +466,12 @@ def generate_time_in_tz_plot_from_data(output_file, title, config, time_data, ti
         ax.plot(time_data, time_in_tz, 'k.-', label="Time in target zone (%)")
 
         # draw target zone
-        plt.axhline(y=config['time_in_tz_max'], color='green', linestyle='--')
-        plt.axhline(y=config['time_in_tz_min'], color='orange', linestyle='--')
-        plt.axhline(y=config['time_in_tz_warn'], color='red', linestyle='--')
+        plt.axhline(y=config.time_in_tz_max, color='green', linestyle='--')
+        plt.axhline(y=config.time_in_tz_min, color='orange', linestyle='--')
+        plt.axhline(y=config.time_in_tz_warn, color='red', linestyle='--')
         (xlim_min, xlim_max) = ax.get_xbound()
-        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config['time_in_tz_min'], config['time_in_tz_min'], config['time_in_tz_max'], config['time_in_tz_max']), 'palegreen')
-        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config['time_in_tz_warn'], config['time_in_tz_warn'], config['time_in_tz_min'], config['time_in_tz_min']), 'palegoldenrod')
+        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config.time_in_tz_min, config.time_in_tz_min, config.time_in_tz_max, config.time_in_tz_max), 'palegreen')
+        plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config.time_in_tz_warn, config.time_in_tz_warn, config.time_in_tz_min, config.time_in_tz_min), 'palegoldenrod')
 
         legend = ax.legend()
         plt.savefig(output_file)
@@ -466,7 +481,7 @@ def generate_weekly_reports(config, data):
     # find the starting day of the same week as the first data point
     # first, get the minimum time on the same day
     first_day = datetime.datetime.combine(time_data[0].date(), datetime.time().min)
-    while first_day.weekday() != config['weeks_start_on']:
+    while first_day.weekday() != config.weeks_start_on:
         first_day = first_day - datetime.timedelta(days=1)
 
     # now, generate each week
@@ -474,13 +489,13 @@ def generate_weekly_reports(config, data):
     while first_day < time_data[-1]:
         daystr = date_to_output(first_day)
         logging.info("Generating graph for week starting {daystr}")
-        output_file = os.path.join(config['reports_dir'], f"{daystr}_weekly.png")
+        output_file = os.path.join(config.reports_dir, f"{daystr}_weekly.png")
         reports.append(output_file)
         generate_one_week_report(output_file, f"Blood Glucose Levels for the week starting {daystr}", config, data, first_day)
         first_day = first_day + datetime.timedelta(weeks=1)
 
     # generate the index file
-    with open(os.path.join(config['reports_dir'], "index.html"), 'w') as f:
+    with open(os.path.join(config.reports_dir, "index.html"), 'w') as f:
         f.write("<html>")
         f.write("<head><title>Weekly Blood Glucose Reports</title></head>")
         f.write("<body>")
@@ -529,4 +544,43 @@ def generate_all_time_tz_plot(output_file, config, data):
 
 
 if __name__ == '__main__':
-    main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--target-min',
+            help='Minimum Target Zone for Blood Glucose Level (in mg/dL)',
+            default=70,
+    )
+
+    ap.add_argument('--target-max',
+            help='Maximum Target Zone for Blood Glucose Level (in mg/dL)',
+            default=180,
+    )
+    ap.add_argument('--time-in-tz-min',
+            help='Minimum expected time in target zone in percent (e.g. 80.0)',
+            default=80.0,
+    )
+    ap.add_argument('--time-in-tz-max',
+            help='Maximum expected time in target zone in percent (e.g. 100.0)',
+            default=100.0,
+    )
+    ap.add_argument('--time-in-tz-warn',
+            help='Second best minimum expected time in target zone in percent (e.g. 70.0)',
+            default=70.0,
+    )
+    ap.add_argument('--weeks-start-on',
+            help='Day of the week that weekly graphs start on (0=monday, 6=sunday)',
+            default=6,
+    )
+    ap.add_argument('--notes-data',
+            help='Notes/Labels to annotate graphs (in JSON format)',
+            nargs='+',
+    )
+
+    required = ap.add_argument_group('required arguments')
+    required.add_argument('--cgm-data',
+            help='Continuous Glucose Monitoring (CGM) data file(s) (in libreview CSV format)',
+            nargs='+',
+    )
+
+    config = ap.parse_args()
+
+    main(config)
