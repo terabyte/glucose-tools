@@ -438,7 +438,19 @@ def generate_glucose_plot_from_data(output_file, title, config, time_data, gluco
         plt.axhline(y=config.target_min, color='green', linestyle='--')
         plt.axhline(y=config.target_max, color='red', linestyle='--')
         (xlim_min, xlim_max) = ax.get_xbound()
+        (ylim_min, ylim_max) = ax.get_ybound()
         plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config.target_min, config.target_min, config.target_max, config.target_max), 'palegreen')
+
+        # draw labeled notes if present
+        for note in config.notes:
+            logging.info(f"Annotating datetime {note['datetime']} with text '{note['text']}'")
+            ax.annotate(
+                note['text'], (note['datetime'], ylim_min),
+                xytext=(90, -20), textcoords='offset pixels',
+                arrowprops=dict(facecolor='red', width=0.1, headwidth=4, headlength=4),
+                fontsize=7,
+                horizontalalignment='right', verticalalignment='top',
+            )
 
         legend = ax.legend()
         plt.savefig(output_file)
@@ -470,8 +482,20 @@ def generate_time_in_tz_plot_from_data(output_file, title, config, time_data, ti
         plt.axhline(y=config.time_in_tz_min, color='orange', linestyle='--')
         plt.axhline(y=config.time_in_tz_warn, color='red', linestyle='--')
         (xlim_min, xlim_max) = ax.get_xbound()
+        (ylim_min, ylim_max) = ax.get_ybound()
         plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config.time_in_tz_min, config.time_in_tz_min, config.time_in_tz_max, config.time_in_tz_max), 'palegreen')
         plt.fill((xlim_min, xlim_max, xlim_max, xlim_min), (config.time_in_tz_warn, config.time_in_tz_warn, config.time_in_tz_min, config.time_in_tz_min), 'palegoldenrod')
+
+        # draw labeled notes if present
+        for note in config.notes:
+            logging.info(f"Annotating datetime {note['datetime']} with text '{note['text']}'")
+            ax.annotate(
+                note['text'], (note['datetime'], ylim_min),
+                xytext=(90, -20), textcoords='offset pixels',
+                arrowprops=dict(facecolor='red', width=0.1, headwidth=4, headlength=4),
+                fontsize=7,
+                horizontalalignment='right', verticalalignment='top',
+            )
 
         legend = ax.legend()
         plt.savefig(output_file)
