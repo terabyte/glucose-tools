@@ -13,7 +13,9 @@ $ ./analyze.py
 ```
 
 # TODO
+* make index.html include all generated graphs
 * clean up graph, make it prettier
+* % data completion - measure gaps in data?
 * tag data points - green if surrounding 24hrs is >80% in target?
 * produce weekly graphs over a time interval longer than 1 week (i.e. for a month, produce 4 week-long graphs)
 * produce daily aggregate average graph
