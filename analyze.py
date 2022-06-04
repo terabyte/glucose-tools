@@ -519,10 +519,25 @@ def generate_weekly_reports(config, data):
         first_day = first_day + datetime.timedelta(weeks=1)
 
     # generate the index file
+    # TODO: this should be extracted out and generate based on what files are
+    # present so it can include all graphs.  For now we will hardcode the
+    # graphs we care about.
     with open(os.path.join(config.reports_dir, "index.html"), 'w') as f:
         f.write("<html>")
-        f.write("<head><title>Weekly Blood Glucose Reports</title></head>")
+        f.write("<head><title>Blood Glucose Reports</title></head>")
         f.write("<body>")
+        f.write("\t<h1>All-Time Glucose Levels</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"all-time-glucose-graph.png\"/>")
+        f.write("</p>")
+        f.write("\t<h1>All-Time daily time spent in zone</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"all-time-tz-graph.png\"/>")
+        f.write("</p>")
+        f.write("\t<h1>All-Time weekly time spent in zone</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"weekly-tz-graph.png\"/>")
+        f.write("</p>")
         f.write("\t<h1>Weekly Blood Glucose Reports</h1>")
         for report_file in reports:
             f.write("<p>")

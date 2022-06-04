@@ -22,9 +22,9 @@ Optionally, you can specify --notes-data as well.  Here is an example of the fil
 Currently, only type 'label' is supported, and those labels will be added to any graph that includes that time.
 
 # TODO
-* make index.html include all generated graphs
 * include tags for labels so graphs can include only labels with a given tag
 * % data completion - measure gaps in data?
+* clean up index generation
 * tag data points and apply colors? green if surrounding 24hrs is >80% in target?
 * produce weekly graphs over a time interval longer than 1 week (i.e. for a month, produce 4 week-long graphs)
 * produce daily aggregate average graph.  What if a line was drawn for each day but the more recent, the darker it is, would that look good?  easy to see changes?
