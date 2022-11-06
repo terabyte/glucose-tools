@@ -129,6 +129,18 @@ def main(config):
             notes_data = list(map(lambda x: dict(x, timestamp=x['datetime'].timestamp()), notes_data))
             config.notes = notes_data
 
+
+    # merge notes from CGM data into notes data
+    for time, record in data.items():
+        if record['notes'] is not None and len(record['notes']) > 0:
+            dt = dateutil.parser.parse(record['timestamp'])
+            note = dict()
+            note['datetime'] = dt
+            note['date'] = str(dt)
+            note['timestamp'] = dt.timestamp()
+            note['text'] = record['notes']
+            config.notes.append(note)
+
     current_datetime = datetime.datetime.now()
     timestr = date_to_output(current_datetime)
     # TODO: move this into args code
