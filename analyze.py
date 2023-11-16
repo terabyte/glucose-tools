@@ -150,9 +150,21 @@ def main(config):
 
     config.reports_dir = reports_dir
     generate_weekly_reports(config, data)
+
+    # all time graphs
     generate_all_time_glucose_plot(os.path.join(reports_dir, "all-time-glucose-graph.png"), config, data)
     generate_all_time_tz_plot(os.path.join(reports_dir, "all-time-tz-graph.png"), config, data)
-    generate_weekly_tz_plot(os.path.join(reports_dir, "weekly-tz-graph.png"), config, data)
+    generate_weekly_tz_plot(os.path.join(reports_dir, "all-time-weekly-tz-graph.png"), config, data)
+
+    # last year graphs
+    generate_time_range_glucose_report(os.path.join(reports_dir, "last-year-glucose-graph.png"), "Last Year Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime)
+    generate_time_range_tz_report(os.path.join(reports_dir, "last-year-tz-graph.png"), "Last Year Daily Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime)
+    generate_time_range_weekly_tz_report(os.path.join(reports_dir, "last-year-weeklytz-graph.png"), "Last Year Weekly Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime)
+
+    # last 6mo graphs
+    generate_time_range_glucose_report(os.path.join(reports_dir, "last-6mo-glucose-graph.png"), "Last Six Month Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime)
+    generate_time_range_tz_report(os.path.join(reports_dir, "last-6mo-tz-graph.png"), "Last Six Month Daily Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime)
+    generate_time_range_weekly_tz_report(os.path.join(reports_dir, "last-6mo-weeklytz-graph.png"), "Last Six Month Weekly Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime)
     sys.exit(0)
 
 
@@ -538,18 +550,49 @@ def generate_weekly_reports(config, data):
         f.write("<html>")
         f.write("<head><title>Blood Glucose Reports</title></head>")
         f.write("<body>")
+        # all time reports
         f.write("\t<h1>All-Time Glucose Levels</h1>")
         f.write("<p>")
         f.write(f"<img src=\"all-time-glucose-graph.png\"/>")
         f.write("</p>")
-        f.write("\t<h1>All-Time daily time spent in zone</h1>")
+        f.write("\t<h1>All-Time Daily Time Spent In Zone</h1>")
         f.write("<p>")
         f.write(f"<img src=\"all-time-tz-graph.png\"/>")
         f.write("</p>")
-        f.write("\t<h1>All-Time weekly time spent in zone</h1>")
+        f.write("\t<h1>All-Time Weekly Time Spent In Zone</h1>")
         f.write("<p>")
-        f.write(f"<img src=\"weekly-tz-graph.png\"/>")
+        f.write(f"<img src=\"all-time-weekly-tz-graph.png\"/>")
         f.write("</p>")
+
+        # last year reports
+        f.write("\t<h1>Last Year Glucose Levels</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"last-year-glucose-graph.png\"/>")
+        f.write("</p>")
+        f.write("\t<h1>Last Year Daily time spent in zone</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"last-year-tz-graph.png\"/>")
+        f.write("</p>")
+        f.write("\t<h1>Last Year Weekly Time Spent In Zone</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"last-year-weekly-tz-graph.png\"/>")
+        f.write("</p>")
+
+        # last 6mo reports
+        f.write("\t<h1>Last Six Month Glucose Levels</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"last-6mo-glucose-graph.png\"/>")
+        f.write("</p>")
+        f.write("\t<h1>Last Six Month Daily time spent in zone</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"last-6mo-tz-graph.png\"/>")
+        f.write("</p>")
+        f.write("\t<h1>Last Six Month Weekly Time Spent In Zone</h1>")
+        f.write("<p>")
+        f.write(f"<img src=\"last-6mo-weekly-tz-graph.png\"/>")
+        f.write("</p>")
+
+        # weekly reports
         f.write("\t<h1>Weekly Blood Glucose Reports</h1>")
         for report_file in reports:
             f.write("<p>")
@@ -558,6 +601,27 @@ def generate_weekly_reports(config, data):
         f.write("</body>")
         f.write("</html>")
 
+
+def generate_time_range_glucose_report(output_file, title, config, data, start_date, end_date):
+    """
+    Given the already-parsed data, generate a graph of the data for an arbitrary range of time
+    """
+    time_data, glucose = graphify_glucose_data(data, start_date=start_date, end_date=end_date)
+    generate_glucose_plot_from_data(output_file, title, config, time_data, glucose)
+
+def generate_time_range_tz_report(output_file, title, config, data, start_date, end_date):
+    """
+    Given the already-parsed data, generate a graph of the data for an arbitrary range of time
+    """
+    time_data, tz_data = graphify_time_in_tz_data(config, data, start_date, end_date)
+    generate_time_in_tz_plot_from_data(output_file, title, config, time_data, tz_data)
+
+def generate_time_range_weekly_tz_report(output_file, title, config, data, start_date, end_date):
+    """
+    Given the already-parsed data, generate a graph of the data for an arbitrary range of time
+    """
+    time_data, tz_data = graphify_time_in_tz_data(config, data, start_date, end_date, datetime.timedelta(weeks=1))
+    generate_time_in_tz_plot_from_data(output_file, title, config, time_data, tz_data)
 
 def generate_one_week_report(output_file, title, config, data, start_date):
     """
