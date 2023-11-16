@@ -192,10 +192,14 @@ def calculate_time_glucose_transitions(time_a, glucose_a, target_glucose, time_b
     print(f"Result should be {time_a + datetime.timedelta(seconds=15)}: " + str(calculate_time_glucose_transitions(time_a, glucose_b, 185, time_b, glucose_a)))
     # ### end test code
     """
-
-    glucose_range = glucose_b - glucose_a
-    time_delta_to_transition = ((target_glucose - glucose_a) / (glucose_b - glucose_a)) * (time_b - time_a)
-    return time_a + time_delta_to_transition
+    try:
+        glucose_range = glucose_b - glucose_a
+        time_delta_to_transition = ((target_glucose - glucose_a) / (glucose_b - glucose_a)) * (time_b - time_a)
+        return time_a + time_delta_to_transition
+    except:
+        # if we get a div by zero or something, just assume it happened at time A
+        # TODO: is this the best option? why is this happening?
+        return time_a
 
 
 @memoization.cached
