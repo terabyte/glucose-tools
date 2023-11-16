@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import concurrent.futures
 import csv
 import datetime
 import dateutil
@@ -149,22 +150,28 @@ def main(config):
     os.makedirs(reports_dir, exist_ok=True)
 
     config.reports_dir = reports_dir
-    generate_weekly_reports(config, data)
 
-    # all time graphs
-    generate_all_time_glucose_plot(os.path.join(reports_dir, "all-time-glucose-graph.png"), config, data)
-    generate_all_time_tz_plot(os.path.join(reports_dir, "all-time-tz-graph.png"), config, data)
-    generate_weekly_tz_plot(os.path.join(reports_dir, "all-time-weekly-tz-graph.png"), config, data)
+    # do stuff in parallel
+    return_values = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
 
-    # last year graphs
-    generate_time_range_glucose_report(os.path.join(reports_dir, "last-year-glucose-graph.png"), "Last Year Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime)
-    generate_time_range_tz_report(os.path.join(reports_dir, "last-year-tz-graph.png"), "Last Year Daily Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime)
-    generate_time_range_weekly_tz_report(os.path.join(reports_dir, "last-year-weeklytz-graph.png"), "Last Year Weekly Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime)
+        return_values.append(executor.submit(generate_weekly_reports, config, data))
 
-    # last 6mo graphs
-    generate_time_range_glucose_report(os.path.join(reports_dir, "last-6mo-glucose-graph.png"), "Last Six Month Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime)
-    generate_time_range_tz_report(os.path.join(reports_dir, "last-6mo-tz-graph.png"), "Last Six Month Daily Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime)
-    generate_time_range_weekly_tz_report(os.path.join(reports_dir, "last-6mo-weeklytz-graph.png"), "Last Six Month Weekly Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime)
+        # all time graphs
+        return_values.append(executor.submit(generate_all_time_glucose_plot, os.path.join(reports_dir, "all-time-glucose-graph.png"), config, data))
+        return_values.append(executor.submit(generate_all_time_tz_plot, os.path.join(reports_dir, "all-time-tz-graph.png"), config, data))
+        return_values.append(executor.submit(generate_weekly_tz_plot, os.path.join(reports_dir, "all-time-weekly-tz-graph.png"), config, data))
+
+        # last year graphs
+        return_values.append(executor.submit(generate_time_range_glucose_report, os.path.join(reports_dir, "last-year-glucose-graph.png"), "Last Year Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime))
+        return_values.append(executor.submit(generate_time_range_tz_report, os.path.join(reports_dir, "last-year-tz-graph.png"), "Last Year Daily Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime))
+        return_values.append(executor.submit(generate_time_range_weekly_tz_report, os.path.join(reports_dir, "last-year-weeklytz-graph.png"), "Last Year Weekly Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime))
+
+        # last 6mo graphs
+        return_values.append(executor.submit(generate_time_range_glucose_report, os.path.join(reports_dir, "last-6mo-glucose-graph.png"), "Last Six Month Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime))
+        return_values.append(executor.submit(generate_time_range_tz_report, os.path.join(reports_dir, "last-6mo-tz-graph.png"), "Last Six Month Daily Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime))
+        return_values.append(executor.submit(generate_time_range_weekly_tz_report, os.path.join(reports_dir, "last-6mo-weeklytz-graph.png"), "Last Six Month Weekly Time Spent In Zone Report", config, data, (current_datetime - datetime.timedelta(weeks=26)), current_datetime))
+
     sys.exit(0)
 
 
