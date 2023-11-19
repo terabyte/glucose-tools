@@ -160,7 +160,7 @@ def main(config):
         # all time graphs
         return_values.append(executor.submit(generate_all_time_glucose_plot, os.path.join(reports_dir, "all-time-glucose-graph.png"), config, data))
         return_values.append(executor.submit(generate_all_time_tz_plot, os.path.join(reports_dir, "all-time-tz-graph.png"), config, data))
-        return_values.append(executor.submit(generate_weekly_tz_plot, os.path.join(reports_dir, "all-time-weekly-tz-graph.png"), config, data))
+        return_values.append(executor.submit(generate_weekly_tz_plot, os.path.join(reports_dir, "all-time-weeklytz-graph.png"), config, data))
 
         # last year graphs
         return_values.append(executor.submit(generate_time_range_glucose_report, os.path.join(reports_dir, "last-year-glucose-graph.png"), "Last Year Glucose Levels Report", config, data, (current_datetime - datetime.timedelta(weeks=52)), current_datetime))
@@ -572,7 +572,7 @@ def generate_weekly_reports(config, data):
         f.write("</p>")
         f.write("\t<h1>All-Time Weekly Time Spent In Zone</h1>")
         f.write("<p>")
-        f.write(f"<img src=\"all-time-weekly-tz-graph.png\"/>")
+        f.write(f"<img src=\"all-time-weeklytz-graph.png\"/>")
         f.write("</p>")
 
         # last year reports
@@ -586,7 +586,7 @@ def generate_weekly_reports(config, data):
         f.write("</p>")
         f.write("\t<h1>Last Year Weekly Time Spent In Zone</h1>")
         f.write("<p>")
-        f.write(f"<img src=\"last-year-weekly-tz-graph.png\"/>")
+        f.write(f"<img src=\"last-year-weeklytz-graph.png\"/>")
         f.write("</p>")
 
         # last 6mo reports
@@ -600,7 +600,7 @@ def generate_weekly_reports(config, data):
         f.write("</p>")
         f.write("\t<h1>Last Six Month Weekly Time Spent In Zone</h1>")
         f.write("<p>")
-        f.write(f"<img src=\"last-6mo-weekly-tz-graph.png\"/>")
+        f.write(f"<img src=\"last-6mo-weeklytz-graph.png\"/>")
         f.write("</p>")
 
         # weekly reports
