@@ -92,8 +92,6 @@ def main(config):
     logging.getLogger().setLevel(logging.DEBUG)
     logging.getLogger('matplotlib').setLevel(logging.INFO)
 
-    logging.info(f"File to analyze: {sys.argv[1]}")
-
     time_data = []
     data = {}
     #config = {
